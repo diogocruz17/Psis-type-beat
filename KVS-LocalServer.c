@@ -9,10 +9,31 @@
 #include <string.h>
 #define KVS_LS_SOCK_PATH "/tmp/kvs_ls"
 
+
+
+
+void client(int client_sock)
+{
+
+
+
+
+    return;
+}
+
+
+
+
+
+
+
+
+
+
 int main(int argc, char *argv[])
 {
     struct sockaddr_un addr;
-    int kvs_ls_sock, app_sock;
+    int kvs_ls_sock, app_sock,n_client=0;
     ssize_t numRead;
 
     kvs_ls_sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -33,15 +54,35 @@ int main(int argc, char *argv[])
         printf("Error listening server socket\n");
         exit(-1);
     }
-    int num;
+    
     while(1) { 
         app_sock = accept(kvs_ls_sock, NULL, NULL);
         if (app_sock == -1){
             printf("Error connecting to application socket\n");
             exit(-1);
         }
-        read(app_sock,&num,sizeof(int));
-        printf("%d\n",num);
+        else{
+            printf("Client connected\n");
+            //pthread_create
+        }
+        
+        /*while(1)
+        {
+            if((n_read=read(app_sock,&charac,1))==-1){
+                printf("Error reading pipe.Exiting ...\n");
+                exit(-1);
+            }
+            if(charac!=' '){
+                buff[i]=charac;
+                i++;
+            }
+            else
+            {
+                printf("%s\n",buff);
+                i=0;
+            }
+        }*/
     }
+    return 0;
         
 }
