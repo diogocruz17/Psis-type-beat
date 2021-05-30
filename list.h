@@ -29,7 +29,5 @@ Item      getItemLista (t_lista *p);
 t_lista  *getProxElementoLista(t_lista *p);
 int       numItensNaLista (t_lista *lp);
 void 	  libertaLista(t_lista *lp, void freeItem(Item));
-void	  escrevePalavrasNormal(t_lista* lp, FILE* fp, int total_palavras);
-void	  escrevePalavrasInverso(t_lista* lp, FILE* fp, int total_palavras);
 
 #endif
