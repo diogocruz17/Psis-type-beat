@@ -8,15 +8,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include "localsv_func.h"
+#include "list_groups.h"
+#include "list_key_value.h"
 #define KVS_LS_SOCK_PATH "/tmp/kvs_ls"
+
+groups *groups_list;
+int auth_sock;
 
 void *client_thread(void *sock)
 {
-    printf("dentro thread\n");
+    //printf("dentro thread\n");
     char buffer[10000], c_aux = 'a';
     char group_id[64], secret[128], key[128], command[20], value_aux[9500];
     int client_sock = *(int *)sock, n_read;
     int i,returned;
+    groups *app_group;
+
     while (1)
     {
         do
@@ -33,6 +40,19 @@ void *client_thread(void *sock)
         //envia para auth server para validar
         //envia resposta para app
         //if for aceite break;
+        returned=findGroup(groups_list,group_id);
+        if(returned==1){
+            app_group=getGroup(groups_list,group_id);
+            break;
+        }else{
+            groups_list=createGroup(groups_list,group_id,secret);
+            if(groups_list==NULL){
+                printf("Memory Error.Exiting...\n");
+                exit(-1);
+            }
+            app_group=getGroup(groups_list,group_id);
+            break;
+        }
     }
     while (1)
     {
@@ -45,12 +65,15 @@ void *client_thread(void *sock)
             i++;
         } while (c_aux != '\0');
         i = 0;
-        printf("%s\n", buffer);
+        //printf("%s\n", buffer);
 
         sscanf(buffer, "%s", command);
         if (strcmp(command, "put") == 0)
         {
             n_read = sscanf(buffer, "%s %s %s", command, key, value_aux);
+            app_group->keyvalue_list=putValue(app_group->keyvalue_list,key,value_aux);
+            //manda feedback
+            continue;
         }
         if (strcmp(command, "get") == 0)
         {
@@ -65,14 +88,15 @@ void *client_thread(void *sock)
         }
     }
 
-    return 0;
+    return NULL;
 }
 
 
 void *localserver_ui(void *sock)
 {
-    char group_id[64], secret[128],command[20],command_2[20],buffer[100];
-    int n_read;
+    char group_id[64], secret[128],command[20],command_2[20],buffer[100],*char_aux;
+    int n_read,returned,n_keyvalue;
+    groups *aux;
     while(1)
     {
         fgets(buffer,100,stdin);
@@ -85,8 +109,17 @@ void *localserver_ui(void *sock)
                 printf("Arguments missing. Try again\n");
                 continue;
             }
-            //create_group para o auth server
-            //criar grupo no local server
+            
+            returned=findGroup(groups_list,group_id);
+            if(returned==1){
+                printf("Group already exists\n");
+                continue;
+            }
+            else{
+                //manda para auth
+                groups_list=createGroup(groups_list,group_id,secret);
+            }
+            
         }
         if(strcmp(command,"delete")==0)
         {
@@ -96,14 +129,35 @@ void *localserver_ui(void *sock)
                 printf("Arguments missing. Try again\n");
                 continue;
             }
-            //delete_group(group_id);
+            returned=DeleteGroup(groups_list,group_id);
+            if(returned==1){
+                printf("Group deleted successfully\n");
+                continue;
+            }else{
+                printf("Group doesn't exit. No changees were made.\n");
+                continue;
+            }
         }
         if(strcmp(command,"group")==0)
         {
             sscanf(buffer,"%s %s",command,command_2);
             if(strcmp(command_2,"info")==0)
             {
-                //show group info
+                sscanf(buffer,"%s %s %s",command,command_2,group_id);
+                aux=getGroup(groups_list,group_id);
+                if(aux==NULL)
+                {
+                    printf("Group doesn't exist.\n");
+                    continue;
+                }
+                char_aux=getSecret(aux);
+                n_keyvalue=getNumKeyvalue(aux);
+                printf("Group:%s \tSecret:%s Number of key-value pairs:%d\n",group_id,secret,n_keyvalue);
+                free(char_aux);
+                continue;
+
+
+
             }
         }
         if(strcmp(command,"app")==0)
@@ -119,7 +173,7 @@ void *localserver_ui(void *sock)
             printf("Command not recognized. Try again\n");
         }
     }
-    return ;
+    return NULL;
 
 }
 
@@ -129,6 +183,7 @@ int main(int argc, char *argv[])
     int kvs_ls_sock, app_sock, n_client = 0;
     ssize_t numRead;
     pthread_t clients[100],localsv_ui;
+    groups_list=initGroups();
 
     kvs_ls_sock = socket(AF_UNIX, SOCK_STREAM, 0);
     if (kvs_ls_sock == -1)
@@ -165,7 +220,7 @@ int main(int argc, char *argv[])
         {
             printf("Client connected\n");
             pthread_create(&clients[n_client], NULL, client_thread, &app_sock);
-            printf("main depois thread");
+            //("main depois thread");
             n_client++;
         }
     }
