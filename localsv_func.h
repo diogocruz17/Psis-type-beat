@@ -1,3 +1,6 @@
 
+struct Pair;
+struct Receive;
 
-int create_group(char *group_id);
+int CreateINETSock();
+char* CommAuth(char *group_id, char *secret, char *command);

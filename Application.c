@@ -13,7 +13,7 @@
 int local_server, aux = 1, i = 0;
 int main(int argc, char *argv[])
 {
-    int i = 0, n_read, status_app, status_sv;
+    int i = 0, n_read, status_app, status_sv,PID=getpid();
     char buffer[10000];
     char group_id[64], secret[128], key[128], command[20], value_aux[9500];
     char *value = NULL;
@@ -47,6 +47,13 @@ int main(int argc, char *argv[])
         if (status_app == -1)
             exit(-1);
     }
+
+    /*if(write(local_server,&PID,sizeof(int)) <1)
+    {
+        printf("Connection error to local server.Exiting...\n");
+        exit(-1);
+    }*/
+
     while (1)
     {
         fgets(buffer, 10000, stdin);

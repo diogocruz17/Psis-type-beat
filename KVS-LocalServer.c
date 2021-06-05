@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "localsv_func.h"
 #include "list_groups.h"
 #include "list_key_value.h"
@@ -15,15 +17,16 @@
 
 groups *groups_list;
 int auth_sock;
+struct sockaddr_in server_addr;
 
 void *client_thread(void *sock)
 {
     //printf("dentro thread\n");
     char buffer[10000], c_aux = 'a';
     char group_id[64], secret[128], key[128], command[20], value_aux[9500];
-    char *value;
+    char *value,*auth_aux;
     int client_sock = *(int *)sock, n_read;
-    int i,returned,auth_return,local_return,value_size;
+    int i,returned,auth_return,local_return,value_size,PID;
     groups *app_group;
     
 
@@ -41,30 +44,42 @@ void *client_thread(void *sock)
         //printf("%s\n", buffer);
         sscanf(buffer, "%s %s %s",command,group_id,secret);
         //printf("%s %s %s\n",command,group_id,secret);
-        //envia para auth server para validar
-        auth_return=0;
-        write(client_sock,&auth_return,sizeof(int));
 
-        if(auth_return<0){      //not authenticated
+        auth_aux=CommAuth(group_id,secret,command);
+        if((strcmp(auth_aux,"invalid"))==0){
+            auth_return=-2;
+            write(client_sock,&auth_return,sizeof(int));
+            free(auth_aux);
             continue;
         }
-        
-        returned=findGroup(groups_list,group_id);
-        if(returned==1){
-            app_group=getGroup(groups_list,group_id);
-            printf("Client connected to group:%s\n",group_id);
-            break;
-        }else{
-            groups_list=createGroup(groups_list,group_id,secret);
-            if(groups_list==NULL){
-                printf("Memory Error.Exiting...\n");
-                exit(-1);
+        if((strcmp(auth_aux,"wrong"))==0){
+            auth_return=-3;
+            write(client_sock,&auth_return,sizeof(int));
+            free(auth_aux);
+            continue;
+        }
+        if((strcmp(auth_aux,"connected"))==0){
+            free(auth_aux);
+            auth_return=0;
+            write(client_sock,&auth_return,sizeof(int));
+            returned=findGroup(groups_list,group_id);
+            if(returned==1){
+                app_group=getGroup(groups_list,group_id);
+                printf("Client connected to group:%s\n",group_id);
+                break;
+            }else{
+                groups_list=createGroup(groups_list,group_id,secret);
+                if(groups_list==NULL){
+                    printf("Memory Error.Exiting...\n");
+                    exit(-1);
+                }
+                app_group=getGroup(groups_list,group_id);
+                printf("Client connected to group:%s\n",group_id);
+                break;
             }
-            app_group=getGroup(groups_list,group_id);
-            printf("Client connected to group:%s\n",group_id);
-            break;
         }
     }
+    //read(client_sock,&PID,sizeof(int));
     
     while (1)
     {
@@ -163,6 +178,7 @@ void *client_thread(void *sock)
 void *localserver_ui(void *sock)
 {
     char group_id[64], secret[128],command[20],command_2[20],buffer[100],*char_aux;
+    char *auth_aux;
     int n_read,returned,n_keyvalue;
     groups *aux;
     while(1)
@@ -184,8 +200,9 @@ void *localserver_ui(void *sock)
                 continue;
             }
             else{
-                //manda para auth
-                strcpy(secret,"123");
+                auth_aux=CommAuth(group_id,secret,command);
+                strcpy(secret,auth_aux);
+                free(auth_aux);
                 groups_list=createGroup(groups_list,group_id,secret);
                 printf("Group %s created.Secret %s\n",group_id,secret);
                 continue;
@@ -260,6 +277,8 @@ int main(int argc, char *argv[])
     int kvs_ls_sock, app_sock, n_client = 0;
     ssize_t numRead;
     pthread_t clients[100],localsv_ui;
+
+    auth_sock=CreateINETSock();
     groups_list=initGroups();
 
     kvs_ls_sock = socket(AF_UNIX, SOCK_STREAM, 0);
