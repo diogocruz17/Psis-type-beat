@@ -58,7 +58,7 @@ keyvalue  *putValue (keyvalue *head,char *key, char *value)
     if(aux != NULL){
         while( aux->next != NULL){
             if(strcmp(aux->key,key)==0){
-                realloc(aux->value,strlen(value)+1);
+                aux->value=(char*)realloc(aux->value,strlen(value)+1);
                 strcpy(aux->value,value);
                 return head;
             }
@@ -73,8 +73,14 @@ keyvalue  *putValue (keyvalue *head,char *key, char *value)
     if(new_node->value==NULL) return NULL;
     strcpy(new_node->value,value);
     new_node->next=NULL;
-    aux->next = new_node;
-    return head;
+    if(head==NULL)
+    {
+        aux=new_node;
+        return aux;
+    }else{
+        aux->next = new_node;
+        return head;
+    }
 }
 
 
@@ -138,24 +144,32 @@ int findKey (keyvalue *head,char *key)
 *
 *****************************************************************************/
 
-int  DeleteValue(keyvalue *head, char *key)
+keyvalue *DeleteValue(keyvalue *head, char *key)
 {
 
-    keyvalue *aux;
+    keyvalue *aux,*temp;
     aux = head;
-
     if(aux != NULL){
+        if(strcmp(aux->key,key)==0){
+            head=head->next;
+            free(aux->value);
+            free(aux);
+            return head;
+        }
         while( aux != NULL){
-            if(strcmp(aux->next->key,key)==0){
-                aux->next=aux->next->next;
+            if(strcmp(aux->next->key,key)==0)
+            {
+                temp=aux->next->next;
                 free(aux->next->value);
                 free(aux->next);
-                return 1;
+                aux->next=temp;
+                return head;
+                 
             }
             aux = aux->next;
         }
     }
-    return 0;
+    //return 0;
 }
 
 
@@ -172,13 +186,15 @@ int  DeleteValue(keyvalue *head, char *key)
 
 int numKeyvalue(keyvalue *head)
 {
-    keyvalue *aux;  
+    keyvalue *aux=head;  
     int count = 0;
 
-    for(aux = head; aux != NULL; aux = aux -> next)
-    count++;
-
+    while(aux!=NULL){
+        count++;
+        aux=aux->next;
+    }
     return count;
+    
 }
 
 /******************************************************************************

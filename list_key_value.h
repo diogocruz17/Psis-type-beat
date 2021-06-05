@@ -29,7 +29,7 @@ keyvalue  *initKeyvalue(void);
 keyvalue  *putValue (keyvalue *head,char *key, char *value);
 char* getValue (keyvalue *head,char *key);
 int findKey (keyvalue *head,char *key);
-int  DeleteValue(keyvalue *head, char *key);
+keyvalue *DeleteValue(keyvalue *head, char *key);
 int numKeyvalue(keyvalue *head);
 void freeKeyvalue(keyvalue *head);
 

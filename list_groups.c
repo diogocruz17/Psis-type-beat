@@ -71,8 +71,14 @@ groups  *createGroup (groups *head, char *group_id, char *secret)
     strcpy(new_node->secret,secret);
     new_node->keyvalue_list=initKeyvalue();
     new_node->next=NULL;
-    aux->next = new_node;
-    return head;
+    if(aux==NULL)
+    {
+        aux=new_node;
+        return aux;
+    }else{
+        aux->next = new_node;
+        return head;
+    }
 }
 
 
@@ -153,15 +159,23 @@ int getNumKeyvalue (groups *node)
 int  DeleteGroup(groups *head, char *group_id)
 {
 
-    groups *aux;
+    groups *aux,*temp;
     aux = head;
-
     if(aux != NULL){
+        if(strcmp(aux->group_id,group_id)==0){
+            head=head->next;
+            freeKeyvalue(aux->keyvalue_list);
+            free(aux);
+            aux=temp;
+            return 1;
+        }
         while( aux != NULL){
             if(strcmp(aux->next->group_id,group_id)==0)
             {
+                temp=aux->next->next;
                 freeKeyvalue(aux->next->keyvalue_list);
                 free(aux->next);
+                aux->next=temp;
                 return 1;
                  
             }

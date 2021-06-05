@@ -7,11 +7,15 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include "KVS-lib.h"
 #define KVS_LS_SOCK_PATH "/tmp/kvs_ls"
 
 int init()
 {
+    sigaction(SIGPIPE, &(struct sigaction){SIG_IGN}, NULL);
+
+
     struct sockaddr_un addr;
     int local_server;
     ssize_t numRead;
@@ -44,7 +48,7 @@ int check_status_connection(int status, char *group_id)
     }
     if (status == -2)
     {
-        printf("Group doesnt exist.Try again\n");
+        printf("Group doesn't exist.Try again\n");
         return 0;
     }
     if (status == -3)
@@ -52,11 +56,11 @@ int check_status_connection(int status, char *group_id)
         printf("Secret is wrong.Try again\n");
         return 0;
     }
-    /*if (status == -4)
+    if (status == -4)
     {
         printf("Couldnt reach authentication server.Try again\n");
         return 0;
-    }*/
+    }
     if (status == 0)
     {
         printf("Connected to group:%s\n", group_id);
@@ -70,6 +74,11 @@ int check_status_put(int status, char *key)
     {
         printf("Lost connection to local server.Exiting...\n");
         return -1;
+    }
+    if (status == -2)
+    {
+        printf("Memory error in local server.No data was altered\n");
+        return -2;
     }
 
     if (status == -5)
@@ -94,7 +103,7 @@ int check_status_get(int status,char* key,char* value)
     if (status == -2)
     {
         printf("The key %s doesnt exist.Try again\n",key);
-        return 0;
+        return -2;
     }
     if (status == -5)
     {
@@ -103,7 +112,8 @@ int check_status_get(int status,char* key,char* value)
     }
     if (status == 1)
     {
-        printf("Value of key:%s is %s\n", key,value);
+        printf("Key:%s\tValue:%s\n", key,value);
+        free(value);
         return 1;
     }
 }
@@ -118,7 +128,7 @@ int check_status_delete(int status,char* key)
     if (status == -2)
     {
         printf("The key %s doesnt exist.Try again\n",key);
-        return 0;
+        return -2;
     }
     if (status == -5)
     {
